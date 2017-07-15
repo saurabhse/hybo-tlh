@@ -1,7 +1,7 @@
 package com.hack17.poc.service.strategy;
 
 import com.hack17.hybo.domain.Allocation;
-import com.hack17.poc.domain.Recommendation;
+import com.hack17.hybo.domain.Recommendation;
 
 public interface TLHStrategy {
 	

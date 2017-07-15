@@ -1,6 +1,9 @@
 package com.hack17.hybo.service;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.PostConstruct;
@@ -9,8 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hack17.hybo.domain.Portfolio;
-import com.hack17.poc.domain.Recommendation;
-import com.hack17.poc.domain.TLHAdvice;
+import com.hack17.hybo.domain.Recommendation;
+import com.hack17.hybo.domain.TLHAdvice;
 import com.hack17.poc.service.strategy.TLHStrategy;
 import com.hack17.poc.service.strategy.TLHThresholdBasedStrategy;
 import com.hack17.hybo.repository.ReferenceDataRepository;
@@ -26,9 +29,13 @@ public class TLHAdvisorService {
 	public TLHAdvice advise(Portfolio portfolio){
 		TLHAdvice tlhAdvice = new TLHAdvice();
 		TLHStrategy tlhStrategy=tlhStrategyMap.get("threshold");
+		List<Recommendation> recommendations = new ArrayList<Recommendation>();
 		portfolio.getAllocations().forEach(allocation-> {
-			tlhAdvice.addRecommendation(tlhStrategy.execute(allocation));
+			recommendations.add(tlhStrategy.execute(allocation));
 		});
+		tlhAdvice.setRecommendations(recommendations);
+		tlhAdvice.setPortfolio(portfolio);
+		tlhAdvice.setAdvisedOnDate(new Date());
 		return tlhAdvice;
 	}
 	

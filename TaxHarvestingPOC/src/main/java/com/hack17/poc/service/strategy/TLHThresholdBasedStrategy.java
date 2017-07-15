@@ -8,10 +8,10 @@ import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.hack17.hybo.domain.Action;
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.Recommendation;
 import com.hack17.hybo.repository.ReferenceDataRepository;
-import com.hack17.poc.domain.Action;
-import com.hack17.poc.domain.Recommendation;
 
 @Data
 public class TLHThresholdBasedStrategy implements TLHStrategy {
