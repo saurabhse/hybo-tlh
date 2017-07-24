@@ -25,10 +25,10 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	
 	
 	@Override
-	public Recommendation execute(Allocation allocation) {
+	public Recommendation execute(Allocation allocation, Date date) {
 		String ticker = allocation.getFund().getTicker();
-		double currPrice = refDataRepo.getLatestPrice(allocation.getFund().getTicker());
-		if(isThresholdPass(allocation, currPrice) && isWashSaleRulePass(allocation)){
+		double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
+		if(currPrice!=0d && isThresholdPass(allocation, currPrice) && isWashSaleRulePass(allocation)){
 			String alternateTicker = refDataRepo.getCorrelatedTicker(ticker);
 			return new Recommendation(ticker, alternateTicker, Action.SELL);
 		}
