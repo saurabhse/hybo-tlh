@@ -1,6 +1,6 @@
 package com.hack17.poc.repository;
 
-import static com.hack17.poc.util.DateTimeUtil.getDate;
+import static com.hack17.hybo.util.DateTimeUtil.getDate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;

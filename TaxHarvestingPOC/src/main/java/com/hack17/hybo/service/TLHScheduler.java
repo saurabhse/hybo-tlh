@@ -1,8 +1,11 @@
 package com.hack17.hybo.service;
 
+
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,7 +42,7 @@ public class TLHScheduler {
 	@Scheduled(initialDelay=0, fixedDelay=300000)
 	public void runOnDateRange(){
 		Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-		printPortfolio(portfolio);
+		printPortfolio(portfolio, null);
 		Calendar cal = Calendar.getInstance();
 		cal.set(Calendar.YEAR, 2017);
 		cal.set(Calendar.MONTH, 6);
@@ -48,8 +51,9 @@ public class TLHScheduler {
 //		System.out.println(cal.getTime());
 		while(cal.getTime().before(today)){
 			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, cal.getTime());
-			if(tlhAdvice.getRecommendations().size()!=0)
-			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
+			if(tlhAdvice.getRecommendations().size()!=0){
+				tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
+			}
 			cal.add(Calendar.DATE, 1);
 		}
 		
@@ -60,8 +64,17 @@ public class TLHScheduler {
 		
 	}
 
-	private void printPortfolio(Portfolio portfolio) {
+	private void printPortfolio(Portfolio portfolio, Date date) {
 		System.out.printf("Portfolio is \n%s", portfolio);
+		
+		List<Double> currentValueList = new ArrayList<Double>();
+		portfolio.getAllocations().stream().forEach(alloc->{
+			double marketPrice = 0.0d;
+			if(date == null)
+				marketPrice = alloc.getCostPrice();
+			currentValueList.add(marketPrice*alloc.getQuantity());
+		});
+		System.out.printf("\n value = %s", currentValueList.stream().mapToDouble(d->d).sum());
 	}
 
 }
