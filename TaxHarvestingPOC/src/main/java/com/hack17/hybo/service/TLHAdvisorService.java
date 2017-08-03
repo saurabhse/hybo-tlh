@@ -11,6 +11,7 @@ import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.test.context.transaction.TransactionConfiguration;
 
 import com.hack17.hybo.domain.Allocation;
 import com.hack17.hybo.domain.Fund;
@@ -33,6 +34,9 @@ public class TLHAdvisorService {
 	
 	@Autowired
 	private TLHAdvisorRepository tlhAdvisorRepo;
+	
+	@Autowired
+	private DBLoggerService dbLoggerService;
 	
 	@Autowired
 	private FundRepository fundRepo;
@@ -60,14 +64,16 @@ public class TLHAdvisorService {
 		
 	}
 	
+	
 	public void execute(TLHAdvice tlhAdvice, Portfolio portfolio){
 		Date adviceDate = tlhAdvice.getAdvisedOnDate();
 		tlhAdvice.getRecommendations().forEach(recommendation->{
-			Optional<Allocation> optionAllocation = portfolio.getAllocations().stream().filter(alloc->alloc.getFund().getTicker().equals(recommendation.getTicker1())).findFirst();
+			Optional<Allocation> optionAllocation = portfolio.getAllocations().stream().filter(alloc->alloc.equals(recommendation.getAllocation())).findFirst();
 			if(optionAllocation.isPresent() && optionAllocation.get().getQuantity() >= recommendation.getQuantity()){
 				double currPrice = refDataRepo.getPriceOnDate(optionAllocation.get().getFund().getTicker(), adviceDate);
 				double soldFor = recommendation.getQuantity()*currPrice;
 				optionAllocation.get().setQuantity(optionAllocation.get().getQuantity()-recommendation.getQuantity());
+				logTransaction(optionAllocation.get(), currPrice, adviceDate, recommendation.getQuantity());
 				Fund allocatedFund = fundRepo.findFund(recommendation.getTicker2());
 				double currPriceAllocatedFund = refDataRepo.getPriceOnDate(recommendation.getTicker2(), adviceDate);
 				int quantityBought = new Double(soldFor/currPriceAllocatedFund).intValue();
@@ -75,5 +81,9 @@ public class TLHAdvisorService {
 				portfolio.addAllocation(allocation);
 			}
 		});
+	}
+	
+	private void logTransaction(Allocation allocation, double sellPrice, Date sellDate, double quantity){
+		dbLoggerService.logTransaction(allocation, sellPrice, sellDate, quantity);
 	}
 }

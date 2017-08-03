@@ -7,6 +7,9 @@ import java.util.List;
 
 
 
+
+import javax.transaction.Transactional;
+
 //import org.apache.log4j.Logger;
 import org.apache.log4j.RollingFileAppender;
 import org.junit.After;
@@ -74,18 +77,23 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		logger.info(ReportUtil.format(portfolio, date2));
 	}
 	
-	@Test 
+	@Test
+	@Transactional
 	public void recommendationForSell() {
-		//Date date1 = DateTimeUtil.getDate2("01-NOV-2012");
-		Date date2 = DateTimeUtil.getDate2("30-OCT-2013");
+		Date date1 = DateTimeUtil.getDate2("30-OCT-2013");
 		Portfolio portfolio = loadPortfolio();
 		//logger.info(ReportUtil.format(portfolio, date1));
-		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, date2);
+		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, date1);
 		assertEquals(1,  tlhAdvice.getRecommendations().size());
 		assertEquals(Action.SELL, tlhAdvice.getRecommendations().get(0).getAction());
 		tlhAdvisorService.execute(tlhAdvice, portfolio);
+		logger.info(ReportUtil.format(portfolio, date1));
+		Date date2 = DateTimeUtil.getDate2("1-APR-2014");
+		tlhAdvice = tlhAdvisorService.advise(portfolio, date2);
+		//assertEquals(1,  tlhAdvice.getRecommendations().size());
+		//assertEquals(Action.SELL, tlhAdvice.getRecommendations().get(0).getAction());
+		tlhAdvisorService.execute(tlhAdvice, portfolio);
 		logger.info(ReportUtil.format(portfolio, date2));
-
 	}
 	
 	@Test

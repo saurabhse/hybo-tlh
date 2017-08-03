@@ -44,11 +44,11 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		portfolio.getAllocations().forEach(allocation-> {
 			String ticker = allocation.getFund().getTicker();
 			double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
-			if(currPrice!=0d && isThresholdPass(allocation, currPrice) && isWashSaleRulePass(allocation)){
+			if(currPrice!=0d && isThresholdPass(allocation, currPrice) && isWashSaleRulePass(allocation, date)){
 				String alternateTicker = refDataRepo.getCorrelatedTicker(ticker);
 				if(alternateTicker!=null){
 					int quantity = calculateQuantityToSell(allocation, currPrice);
-					recommendations.add(new Recommendation(ticker, alternateTicker, Action.SELL, quantity));
+					recommendations.add(new Recommendation(allocation, alternateTicker, Action.SELL, quantity));
 				}
 			}
 		});
@@ -70,9 +70,8 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private boolean isWashSaleRulePass(Allocation allocation) {
-		Date testDate = new Date();
-		long diffInMilliSec = testDate.getTime()-allocation.getTransactionDate().getTime();
+	private boolean isWashSaleRulePass(Allocation allocation, Date date) {
+		long diffInMilliSec = date.getTime()-allocation.getTransactionDate().getTime();
 		TimeUnit.DAYS.convert(diffInMilliSec, TimeUnit.MILLISECONDS);
 		return TimeUnit.DAYS.convert(diffInMilliSec, TimeUnit.MILLISECONDS)>30;
 	}
