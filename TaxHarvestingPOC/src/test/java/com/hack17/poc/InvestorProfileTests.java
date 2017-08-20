@@ -48,7 +48,7 @@ public class InvestorProfileTests {
 	public void requiredAttributes() {
 		InvestorProfile profile = profileRepository.getProfile(501);
 		assertNotNull(profile.getDateOfBirth());
-		assertEquals(RiskTolerance.MEDIUM, profile.getRiskTolerance());
+		assertEquals(RiskTolerance.MODERATE, profile.getRiskTolerance());
 		assertEquals(26, profile.getInvestmentHorizonInMonths(), 0);		
 	}
 
