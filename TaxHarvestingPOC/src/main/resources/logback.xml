@@ -29,6 +29,11 @@
 		additivity="false">
 		<appender-ref ref="FILE-AUDIT" />
 	</logger>
+	
+	<logger name="com.hack17.hybo" level="info"
+		additivity="false">
+		<appender-ref ref="FILE-AUDIT" />
+	</logger>
 
 	<root level="error">
 		<appender-ref ref="FILE-AUDIT" />

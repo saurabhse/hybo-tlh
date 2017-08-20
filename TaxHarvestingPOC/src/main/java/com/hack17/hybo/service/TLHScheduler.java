@@ -1,24 +1,31 @@
 package com.hack17.hybo.service;
 
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.TLHAdvice;
 import com.hack17.hybo.repository.PortfolioRepository;
+import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hack17.hybo.repository.TLHAdvisorRepository;
+import com.hack17.hybo.util.DateTimeUtil;
+import com.hack17.hybo.util.ReportUtil;
 
 
 @Component
 public class TLHScheduler {
+	private static Logger logger = LoggerFactory.getLogger(TLHScheduler.class);
+	
+	private Date today;
 	
 	@Autowired
 	private PortfolioRepository portfolioRepo;
@@ -28,6 +35,9 @@ public class TLHScheduler {
 	
 	@Autowired
 	private TLHAdvisorRepository tlhAdvisorRepo;
+	
+	@Autowired
+	private ReferenceDataRepository refDataRepo;
 	
 	//@Scheduled(cron="0 0/1 * * * ?")
 	//@Scheduled(initialDelay=0, fixedDelay=300000)
@@ -39,22 +49,23 @@ public class TLHScheduler {
 //		});
 //		
 //	}
-	@Scheduled(initialDelay=0, fixedDelay=300000)
+	//@Scheduled(initialDelay=0, fixedDelay=10000)
 	public void runOnDateRange(){
 		Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-		printPortfolio(portfolio, null);
-		Calendar cal = Calendar.getInstance();
-		cal.set(Calendar.YEAR, 2017);
-		cal.set(Calendar.MONTH, 6);
-		cal.set(Calendar.DAY_OF_MONTH, 3);
-		Date today = new Date();
-//		System.out.println(cal.getTime());
-		while(cal.getTime().before(today)){
-			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, cal.getTime());
+		
+		Date stopDate = DateTimeUtil.getDateMMMddyyyy("Jun 01, 2013");
+		Date today = DateTimeUtil.getDateMMMddyyyy("Nov 01, 2012");
+		today = DateTimeUtil.add(today, Calendar.MONTH, 1);
+		logger.info(ReportUtil.format(portfolio, today));
+		while(today.before(stopDate)){
+			portfolio = portfolioRepo.getAllPortfolios().get(0);
+			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,today);
 			if(tlhAdvice.getRecommendations().size()!=0){
+				tlhAdvisorService.execute(tlhAdvice);
 				tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
+				logger.info(ReportUtil.format(portfolio, today));
 			}
-			cal.add(Calendar.DATE, 1);
+			today = DateTimeUtil.add(today, Calendar.MONTH, 1);
 		}
 		
 		
@@ -63,18 +74,38 @@ public class TLHScheduler {
 
 		
 	}
-
-	private void printPortfolio(Portfolio portfolio, Date date) {
-		System.out.printf("Portfolio is \n%s", portfolio);
+	
+	@Scheduled(initialDelay=0, fixedDelay=10000)
+	public void runOnDate(){
 		
-		List<Double> currentValueList = new ArrayList<Double>();
-		portfolio.getAllocations().stream().forEach(alloc->{
-			double marketPrice = 0.0d;
-			if(date == null)
-				marketPrice = alloc.getCostPrice();
-			currentValueList.add(marketPrice*alloc.getQuantity());
-		});
-		System.out.printf("\n value = %s", currentValueList.stream().mapToDouble(d->d).sum());
+		List<CurrentDate> dates = refDataRepo.getAll(CurrentDate.class);
+		if(dates.size()==0)
+			return;
+		CurrentDate currDate = dates.get(0);
+		if(today==null)
+			today = currDate.getDate();
+		 
+		if(DateTimeUtil.isMonth(today, 10) && DateTimeUtil.isDay(today, 1)){
+			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
+			ReportUtil.createTLHHistory(portfolio, today);
+		}
+		
+		if(DateTimeUtil.isMonth(today, 9) && DateTimeUtil.isDay(today, 30)){
+			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
+			ReportUtil.createTLHHistory(portfolio, today);
+		}
+		
+		if(!DateTimeUtil.isDay(today, 15))
+			return;
+		
+		
+		Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
+		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,today);
+		if(tlhAdvice.getRecommendations().size()!=0){
+			tlhAdvisorService.execute(tlhAdvice);
+			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
+			logger.info(ReportUtil.format(portfolio, today));
+		}
+		
 	}
-
 }

@@ -139,10 +139,6 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 
 	private double calculateUpperTLHBound(Portfolio portfolio, Date date, NetCapitalGainLoss netCapitalGainLoss) {
 		
-//		Date yearStartDate = getFinancialYearDate(DateTimeUtil.FROM, date);
-//		Date yearEndDate = getFinancialYearDate(DateTimeUtil.TO, date);
-//		List<Transaction> transactions = transactionRepo.getTransactions(portfolio, yearStartDate, yearEndDate);
-//		List<CapitalGainLoss> capitalGainLosses = calculateCapitalGainLoss(transactions);
 		double annualIncome = portfolio.getInvestorProfile().getAnnualIncome();
 		Double totalTaxOnShortCapitalGains = calulateTaxOnShortCapitalGains(annualIncome, netCapitalGainLoss);
 		

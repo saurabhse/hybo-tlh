@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.PostConstruct;
+import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -78,7 +79,7 @@ public class TLHAdvisorService {
 		
 	}
 	
-	
+	@Transactional
 	public void execute(TLHAdvice tlhAdvice){
 		Date adviceDate = tlhAdvice.getAdvisedOnDate();
 		Portfolio portfolio =  tlhAdvice.getPortfolio();
@@ -98,10 +99,10 @@ public class TLHAdvisorService {
 				logTransaction(allocation, 0, null, quantityBought, Action.BUY);
 			}
 		});
-		portfolioRepo.persist(portfolio);
+		portfolioRepo.merge(portfolio);
 	}
 	
 	private void logTransaction(Allocation allocation, double sellPrice, Date sellDate, double quantity, Action action){
-		dbLoggerService.logTransaction(allocation, sellPrice, sellDate, quantity, action);
+		dbLoggerService.logTransaction(allocation, sellPrice, sellDate, quantity, action, CreatedBy.TLH);
 	}
 }
