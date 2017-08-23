@@ -63,6 +63,8 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		if(netCapitalGainLoss.getNetCapitalLoss()!=null)
 			remainingTLHBenefitOnWage-=netCapitalGainLoss.getNetCapitalLoss();
 		for(Allocation allocation: portfolio.getAllocations()) {
+			if("N".equals(allocation.getIsActive()))
+				continue;
 			String ticker = allocation.getFund().getTicker();
 			double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
 			
