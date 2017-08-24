@@ -214,7 +214,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 			Date sellDate = transaction.getSellDate();
 			Double buyPrice = transaction.getBuyPrice();
 			Double sellPrice = transaction.getSellPrice();
-			Double quantity = transaction.getSellQuantity();
+			Double quantity = transaction.getQuantity();
 			boolean isMoreThanYearOld = DateTimeUtil.isMoreThanYearOld(buyDate, sellDate);
 			Double profit = (sellPrice*quantity) - (buyPrice*quantity);
 			captialGainLosses.add(new CapitalGainLoss(profit, calculateCapitalGainLossType(isMoreThanYearOld, profit)));

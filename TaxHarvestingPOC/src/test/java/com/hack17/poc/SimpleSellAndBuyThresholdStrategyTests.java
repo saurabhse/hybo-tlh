@@ -418,14 +418,14 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		assertEquals(getDateMMMddyyyy("Nov 01, 2012"), transaction.getBuyDate());
 		assertEquals(72.5, transaction.getSellPrice(),0);
 		assertEquals(getDateMMMddyyyy("Nov 30, 2012"), transaction.getSellDate());
-		assertEquals(1000, transaction.getSellQuantity(),0);
+		assertEquals(1000, transaction.getQuantity(),0);
 		assertEquals(Action.SELL, transaction.getAction());
 		transaction = refDataRepo.getAll(Transaction.class).get(1);
 		assertEquals(34.20, transaction.getBuyPrice(),0);
 		assertEquals(getDateMMMddyyyy("Nov 30, 2012"), transaction.getBuyDate());
 		assertEquals(0, transaction.getSellPrice(),0);
 		assertNull(transaction.getSellDate());
-		assertEquals(2119, transaction.getSellQuantity(),0);
+		assertEquals(2119, transaction.getQuantity(),0);
 		assertEquals(Action.BUY, transaction.getAction());
 		
 	}
