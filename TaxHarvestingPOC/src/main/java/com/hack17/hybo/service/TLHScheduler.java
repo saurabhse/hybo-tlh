@@ -25,7 +25,6 @@ import com.hack17.hybo.util.ReportUtil;
 public class TLHScheduler {
 	private static Logger logger = LoggerFactory.getLogger(TLHScheduler.class);
 	
-	private Date today;
 	
 	@Autowired
 	private PortfolioRepository portfolioRepo;
@@ -82,29 +81,27 @@ public class TLHScheduler {
 		if(dates.size()==0)
 			return;
 		CurrentDate currDate = dates.get(0);
-		if(today==null)
-			today = currDate.getDate();
 		 
-		if(DateTimeUtil.isMonth(today, 10) && DateTimeUtil.isDay(today, 1)){
+		if(DateTimeUtil.isMonth(currDate.getDate(), 10) && DateTimeUtil.isDay(currDate.getDate(), 1)){
 			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-			ReportUtil.createTLHHistory(portfolio, today);
+			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
 		}
 		
-		if(DateTimeUtil.isMonth(today, 9) && DateTimeUtil.isDay(today, 30)){
+		if(DateTimeUtil.isMonth(currDate.getDate(), 9) && DateTimeUtil.isDay(currDate.getDate(), 30)){
 			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-			ReportUtil.createTLHHistory(portfolio, today);
+			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
 		}
 		
-		if(!DateTimeUtil.isDay(today, 15))
+		if(!DateTimeUtil.isDay(currDate.getDate(), 15))
 			return;
 		
 		
 		Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,today);
+		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
 		if(tlhAdvice.getRecommendations().size()!=0){
 			tlhAdvisorService.execute(tlhAdvice);
 			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
-			logger.info(ReportUtil.format(portfolio, today));
+			logger.info(ReportUtil.format(portfolio, currDate.getDate()));
 		}
 		
 	}
