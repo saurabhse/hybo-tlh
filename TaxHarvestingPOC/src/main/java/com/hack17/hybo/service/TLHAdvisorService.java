@@ -84,13 +84,14 @@ public class TLHAdvisorService {
 	public void execute(TLHAdvice tlhAdvice){
 		Date adviceDate = tlhAdvice.getAdvisedOnDate();
 		Portfolio portfolio =  tlhAdvice.getPortfolio();
+		List<Allocation> newAllocations = null;
 		boolean portfolioCloned = false;
 		Map<Allocation, Allocation> activeAllocMap = new HashMap<>();
 		for(Recommendation recommendation:tlhAdvice.getRecommendations()){
 			//tlhAdvice.getRecommendations().forEach(recommendation->{
 			if(!portfolioCloned){
 				portfolioCloned=true;
-				clonePortfolio(portfolio, activeAllocMap);
+				newAllocations = clonePortfolio(portfolio, activeAllocMap);
 			}
 			Optional<Allocation> optionAllocation =portfolio.getAllocations().stream().filter(alloc->alloc.equals(recommendation.getAllocation()) && "Y".equals(alloc.getIsActive())).findFirst();
 			if(optionAllocation.isPresent() && optionAllocation.get().getQuantity() >= recommendation.getQuantity()){
@@ -104,14 +105,17 @@ public class TLHAdvisorService {
 				double currPriceAllocatedFund = refDataRepo.getPriceOnDate(recommendation.getTicker2(), adviceDate);
 				int quantityBought = new Double(soldFor/currPriceAllocatedFund).intValue();
 				Allocation allocation = new Allocation(allocatedFund,currPriceAllocatedFund,quantityBought,50d, adviceDate, .04,0, CreatedBy.TLH.toString(), adviceDate);
+				newAllocations.add(allocation);
 				portfolio.addAllocation(allocation);
 				logTransaction(allocation, 0, null, quantityBought, Action.BUY);
 			}
 		}
-		portfolioRepo.persist(portfolio);
+		if(portfolioCloned)
+			updatePercCurrent(newAllocations);
+		portfolioRepo.merge(portfolio);
 	}
 	
-	private void clonePortfolio(Portfolio portfolio, Map<Allocation, Allocation> activeAllocMap) {
+	private List<Allocation> clonePortfolio(Portfolio portfolio, Map<Allocation, Allocation> activeAllocMap) {
 		List<Allocation> newAllocations = new ArrayList<>();
 		for(Allocation allocation:portfolio.getAllocations()){
 			if("N".equals(allocation.getIsActive()))
@@ -119,11 +123,35 @@ public class TLHAdvisorService {
 			Allocation newAllocation = new Allocation(allocation.getFund(), allocation.getCostPrice(), allocation.getQuantity(), allocation.getPercentage(), allocation.getTransactionDate(), allocation.getExpenseRatio(), allocation.getInvestment(), allocation.getCreatedBy().toString());
 			newAllocation.setPortfolio(allocation.getPortfolio());
 			newAllocation.setBuyDate(allocation.getBuyDate());
+			newAllocation.setRebalanceDayPerc(allocation.getRebalanceDayPerc());
+			newAllocation.setRebalanceDayPrice(allocation.getRebalanceDayPrice());
+			newAllocation.setRebalanceDayQuantity(allocation.getRebalanceDayQuantity());
+			newAllocation.setType(allocation.getType());
 			allocation.setIsActive("N");
+			
 			activeAllocMap.put(allocation, newAllocation);
 			newAllocations.add(newAllocation);
 		}
 		portfolio.getAllocations().addAll(newAllocations);
+		return newAllocations;
+	}
+	
+	private void updatePercCurrent(List<Allocation> allocationList){
+		double portfolioValue = 0.0;
+		for(Allocation allocation:allocationList){
+			portfolioValue += allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
+		}
+		for(Allocation allocation:allocationList){
+			double value = allocation.getRebalanceDayPrice()*allocation.getRebalanceDayQuantity();
+			try{
+				allocation.setRebalanceDayPerc(value*100/portfolioValue);
+			}
+			catch(Exception e){
+				e.printStackTrace();
+				allocation.setRebalanceDayPerc(0);
+			}
+		}
+		
 	}
 
 

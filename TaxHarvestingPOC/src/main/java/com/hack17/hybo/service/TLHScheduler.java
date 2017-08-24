@@ -98,7 +98,7 @@ public class TLHScheduler {
 		
 		List<Portfolio> portfolios = portfolioRepo.getAllPortfolios();
 		for(Portfolio portfolio: portfolios){
-			if(tlhAdvisorRepo.findTLHAdviceInDateRange(portfolio, currDate.getDate(), currDate.getDate()).size()!=0){
+			if(tlhAdvisorRepo.findTLHAdviceOnDate(portfolio, currDate.getDate()).size()!=0){
 				logger.info(String.format("TLH already ran for portfolio id %d on date %s", portfolio.getId(), currDate.getDate()));
 				continue;
 			}
