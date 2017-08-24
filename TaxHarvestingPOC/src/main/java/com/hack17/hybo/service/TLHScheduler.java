@@ -96,9 +96,13 @@ public class TLHScheduler {
 			return;
 		
 		
-		Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
-		if(tlhAdvice.getRecommendations().size()!=0){
+		List<Portfolio> portfolios = portfolioRepo.getAllPortfolios();
+		for(Portfolio portfolio: portfolios){
+			if(tlhAdvisorRepo.findTLHAdviceInDateRange(portfolio, currDate.getDate(), currDate.getDate()).size()!=0){
+				logger.info(String.format("TLH already ran for portfolio id %d on date %s", portfolio.getId(), currDate.getDate()));
+				continue;
+			}
+			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
 			tlhAdvisorService.execute(tlhAdvice);
 			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
 			logger.info(ReportUtil.format(portfolio, currDate.getDate()));
