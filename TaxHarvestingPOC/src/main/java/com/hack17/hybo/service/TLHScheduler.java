@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.hack17.hybo.domain.CurrentDate;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.TLHAdvice;
+import com.hack17.hybo.domain.TLHRunPortfolioHistory;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hack17.hybo.repository.TLHAdvisorRepository;
@@ -55,14 +56,14 @@ public class TLHScheduler {
 		Date stopDate = DateTimeUtil.getDateMMMddyyyy("Jun 01, 2013");
 		Date today = DateTimeUtil.getDateMMMddyyyy("Nov 01, 2012");
 		today = DateTimeUtil.add(today, Calendar.MONTH, 1);
-		logger.info(ReportUtil.format(portfolio, today));
+		//logger.info(ReportUtil.report(portfolio, today));
 		while(today.before(stopDate)){
 			portfolio = portfolioRepo.getAllPortfolios().get(0);
 			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,today);
 			if(tlhAdvice.getRecommendations().size()!=0){
 				tlhAdvisorService.execute(tlhAdvice);
 				tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
-				logger.info(ReportUtil.format(portfolio, today));
+				//logger.info(ReportUtil.report(portfolio, today));
 			}
 			today = DateTimeUtil.add(today, Calendar.MONTH, 1);
 		}
@@ -113,7 +114,9 @@ public class TLHScheduler {
 			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
 			tlhAdvisorService.execute(tlhAdvice);
 			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
-			logger.info(ReportUtil.format(portfolio, currDate.getDate()));
+			TLHRunPortfolioHistory tlhHistory = new TLHRunPortfolioHistory();
+			logger.info(ReportUtil.report(portfolio, currDate.getDate(),tlhHistory));
+			portfolioRepo.persist(tlhHistory);
 		}
 		
 	}

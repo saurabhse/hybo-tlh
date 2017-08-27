@@ -20,9 +20,11 @@ import java.util.List;
 
 
 
+
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.transaction.Transactional;
+
 
 
 
@@ -60,6 +62,7 @@ import com.hack17.hybo.domain.InvestorProfile;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.RiskTolerance;
 import com.hack17.hybo.domain.TLHAdvice;
+import com.hack17.hybo.domain.TLHRunPortfolioHistory;
 import com.hack17.hybo.domain.Transaction;
 import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.IncomeTaxSlabRepository;
@@ -435,10 +438,10 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		Date date1 = DateTimeUtil.getDatedd_MMM_yyyy("01-NOV-2012");
 		Date date2 = DateTimeUtil.getDatedd_MMM_yyyy("01-MAY-2013");
 		Portfolio portfolio = loadPortfolio();
-		logger.info(ReportUtil.format(portfolio, date1));
+		logger.info(ReportUtil.report(portfolio, date1, new TLHRunPortfolioHistory()));
 		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, date2);
 		assertEquals(1,  tlhAdvice.getRecommendations().size());
-		logger.info(ReportUtil.format(portfolio, date2));
+		logger.info(ReportUtil.report(portfolio, date2,new TLHRunPortfolioHistory()));
 	}
 	
 	@Test @Ignore
@@ -451,13 +454,13 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		assertEquals(1,  tlhAdvice.getRecommendations().size());
 		assertEquals(Action.SELL, tlhAdvice.getRecommendations().get(0).getAction());
 		tlhAdvisorService.execute(tlhAdvice);
-		logger.info(ReportUtil.format(portfolio, date1));
+		logger.info(ReportUtil.report(portfolio, date1,new TLHRunPortfolioHistory()));
 		Date date2 = DateTimeUtil.getDatedd_MMM_yyyy("1-APR-2014");
 		tlhAdvice = tlhAdvisorService.advise(portfolio, date2);
 		//assertEquals(1,  tlhAdvice.getRecommendations().size());
 		//assertEquals(Action.SELL, tlhAdvice.getRecommendations().get(0).getAction());
 		tlhAdvisorService.execute(tlhAdvice);
-		logger.info(ReportUtil.format(portfolio, date2));
+		logger.info(ReportUtil.report(portfolio, date2,new TLHRunPortfolioHistory()));
 	}
 	
 	@Test
