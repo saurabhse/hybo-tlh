@@ -94,8 +94,8 @@ public class TLHScheduler {
 			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
 		}
 		
-		if(!DateTimeUtil.isDay(currDate.getDate(), 15))
-			return;
+//		if(!DateTimeUtil.isDay(currDate.getDate(), 15))
+//			return;
 		
 		
 		List<Portfolio> portfolios = portfolioRepo.getAllPortfolios();
