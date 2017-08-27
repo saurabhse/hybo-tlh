@@ -79,11 +79,13 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				logger.info("There are no emainingTLHBenefits On Gains and Wage");
 				break;
 			}
-			if(currPrice!=0d && isWashSaleRulePass(allocation, date) ){
+			String alternateTicker = refDataRepo.getCorrelatedTicker(allocation.getFund().getTicker());
+			if(currPrice!=0d && isWashSaleRulePass(allocation, date, alternateTicker) ){
 				//&& isTLHConditionPass(portfolio, allocation, currPrice, upperTLHBound, date)
 				int quantityToSell = 0;
 				if(remainingTLHBenefitOnGains>0){
 					double[] tlhBenefitOnGains = calculateTLHBenefitOnGains(allocation, currPrice, remainingTLHBenefitOnGains, date);
+					logger.info("available tlh benefits on gains {}", tlhBenefitOnGains[0]);
 					if(tlhBenefitOnGains[0]>0){
 						remainingTLHBenefitOnGains-=tlhBenefitOnGains[0];
 						quantityToSell+= calculateQuantityToSellOnGains(allocation, currPrice, date, tlhBenefitOnGains[1]);
@@ -91,16 +93,19 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				}
 				if(remainingTLHBenefitOnWage>0){
 					double tlhBenefitOnWages = calculateTLHBenefitOnWages(allocation, currPrice, remainingTLHBenefitOnWage);
+					logger.info("available tlh benefits on wages {}", tlhBenefitOnWages);
 					if(tlhBenefitOnWages>0){
 						remainingTLHBenefitOnWage-=tlhBenefitOnWages;
 						quantityToSell+= calculateQuantityToSellOnWages(allocation, currPrice, tlhBenefitOnWages);
 					}
 				}
-				if(quantityToSell==0)
+				if(quantityToSell==0){
+					logger.info("no quantity available for selling for allocation {}", allocation.getId());
 					continue;
+				}
 				if(quantityToSell>allocation.getQuantity())
 					quantityToSell= allocation.getQuantity();
-				String alternateTicker = refDataRepo.getCorrelatedTicker(ticker);
+				
 				if(alternateTicker!=null && quantityToSell>0){
 					//int quantity = calculateQuantityToSell(allocation, currPrice);
 					recommendations.add(new Recommendation(allocation, alternateTicker, Action.SELL, quantityToSell));
@@ -255,9 +260,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private boolean isWashSaleRulePass(Allocation allocation, Date date) {
-		String allocTicker = allocation.getFund().getTicker();
-		String alternateTicker = refDataRepo.getCorrelatedTicker(allocTicker);
+	private boolean isWashSaleRulePass(Allocation allocation, Date date, String alternateTicker) {
 		Fund correlatedFund = fundRepository.findFund(alternateTicker);
 		Date date30DaysBack = DateTimeUtil.add(date, Calendar.DATE, -30);
 		List<Transaction> transactions = transactionRepo.getTransactions(correlatedFund, allocation.getPortfolio(), date30DaysBack, date);
