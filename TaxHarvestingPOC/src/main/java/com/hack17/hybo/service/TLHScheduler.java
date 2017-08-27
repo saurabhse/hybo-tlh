@@ -83,15 +83,21 @@ public class TLHScheduler {
 		CurrentDate currDate = dates.get(0);
 		 
 		if(DateTimeUtil.isMonth(currDate.getDate(), 10) && DateTimeUtil.isDay(currDate.getDate(), 1)){
-			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-			logger.info("creating year start tlh stats for portfolio id {} on date {}", portfolio.getId(), currDate.getDate());
-			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
+			Date nextWeekDay = DateTimeUtil.getNextWorkingDay(currDate.getDate());
+			for(Portfolio portfolio : portfolioRepo.getAllPortfolios()){
+				logger.info("creating year start tlh stats for portfolio id {} on date {}", portfolio.getId(), nextWeekDay);
+				ReportUtil.createTLHHistory(portfolio, currDate.getDate(), nextWeekDay);
+			}
+			return;
 		}
 		
 		if(DateTimeUtil.isMonth(currDate.getDate(), 9) && DateTimeUtil.isDay(currDate.getDate(), 30)){
-			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
-			logger.info("creating year end tlh stats for portfolio id {} on date {}", portfolio.getId(), currDate.getDate());
-			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
+			Date previousWeekDay = DateTimeUtil.getPreviousWorkingDay(currDate.getDate());
+			for(Portfolio portfolio : portfolioRepo.getAllPortfolios()){
+				logger.info("creating year end tlh stats for portfolio id {} on date {}", portfolio.getId(), previousWeekDay);
+				ReportUtil.createTLHHistory(portfolio, currDate.getDate(), previousWeekDay);
+			}
+			return;
 		}
 		
 //		if(!DateTimeUtil.isDay(currDate.getDate(), 15))

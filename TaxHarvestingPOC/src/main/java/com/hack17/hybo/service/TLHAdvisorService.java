@@ -32,6 +32,8 @@ import com.hack17.hybo.repository.TLHAdvisorRepository;
 import com.hack17.hybo.repository.TransactionRepository;
 import com.hack17.poc.service.strategy.TLHStrategy;
 import com.hack17.poc.service.strategy.TLHThresholdBasedStrategy;
+import com.hackovation.hybo.AllocationType;
+import com.hackovation.hybo.Util.HyboUtil;
 
 @Service
 public class TLHAdvisorService {
@@ -91,6 +93,7 @@ public class TLHAdvisorService {
 		List<Allocation> newAllocations = null;
 		boolean portfolioCloned = false;
 		Map<Allocation, Allocation> activeAllocMap = new HashMap<>();
+		Map<String, AllocationType> fundTypeMap = HyboUtil.getAllocationTypeMap();
 		for(Recommendation recommendation:tlhAdvice.getRecommendations()){
 			//tlhAdvice.getRecommendations().forEach(recommendation->{
 			if(!portfolioCloned){
@@ -109,13 +112,17 @@ public class TLHAdvisorService {
 				double currPriceAllocatedFund = refDataRepo.getPriceOnDate(recommendation.getTicker2(), adviceDate);
 				int quantityBought = new Double(soldFor/currPriceAllocatedFund).intValue();
 				Allocation allocation = new Allocation(allocatedFund,currPriceAllocatedFund,quantityBought,50d, adviceDate, .04,0, CreatedBy.TLH.toString(), adviceDate);
+				allocation.setType(fundTypeMap.get(allocatedFund.getTicker()).name());
+				allocation.setRebalanceDayPrice(allocation.getCostPrice());
+				allocation.setRebalanceDayQuantity(allocation.getQuantity());
 				newAllocations.add(allocation);
 				portfolio.addAllocation(allocation);
 				logTransaction(allocation, 0, null, quantityBought, Action.BUY);
 			}
 		}
-		if(portfolioCloned)
+		if(portfolioCloned){
 			updatePercCurrent(newAllocations);
+		}
 		portfolioRepo.merge(portfolio);
 	}
 	
