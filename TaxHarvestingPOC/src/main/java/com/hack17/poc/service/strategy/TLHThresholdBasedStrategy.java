@@ -80,6 +80,10 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				break;
 			}
 			String alternateTicker = refDataRepo.getCorrelatedTicker(allocation.getFund().getTicker());
+			if(alternateTicker == null){
+				logger.info("No correlated fund found for ticker {}", allocation.getFund().getTicker());
+				continue;
+			}
 			if(currPrice!=0d && isWashSaleRulePass(allocation, date, alternateTicker) ){
 				//&& isTLHConditionPass(portfolio, allocation, currPrice, upperTLHBound, date)
 				int quantityToSell = 0;
