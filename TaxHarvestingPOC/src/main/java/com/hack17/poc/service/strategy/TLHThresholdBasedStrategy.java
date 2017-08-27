@@ -84,7 +84,13 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				logger.info("No correlated fund found for ticker {}", allocation.getFund().getTicker());
 				continue;
 			}
-			if(currPrice!=0d && isWashSaleRulePass(allocation, date, alternateTicker) ){
+			logger.info("correlated fund is {}", alternateTicker);
+			Fund correlatedFund = fundRepository.findFund(alternateTicker);
+			if(correlatedFund == null){
+				logger.info("correlated fund data found for {}", alternateTicker);
+				continue;
+			}
+			if(currPrice!=0d && isWashSaleRulePass(allocation, date, correlatedFund) ){
 				//&& isTLHConditionPass(portfolio, allocation, currPrice, upperTLHBound, date)
 				int quantityToSell = 0;
 				if(remainingTLHBenefitOnGains>0){
@@ -264,8 +270,8 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private boolean isWashSaleRulePass(Allocation allocation, Date date, String alternateTicker) {
-		Fund correlatedFund = fundRepository.findFund(alternateTicker);
+	private boolean isWashSaleRulePass(Allocation allocation, Date date, Fund correlatedFund) {
+		
 		Date date30DaysBack = DateTimeUtil.add(date, Calendar.DATE, -30);
 		List<Transaction> transactions = transactionRepo.getTransactions(correlatedFund, allocation.getPortfolio(), date30DaysBack, date);
 		logger.info("wash sale run for allocation {} {}", allocation.getId(), transactions.size()==0?"passes":"fails");
