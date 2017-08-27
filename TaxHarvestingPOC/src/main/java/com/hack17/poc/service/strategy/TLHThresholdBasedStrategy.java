@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit;
 
 import lombok.Data;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -29,11 +31,13 @@ import com.hack17.hybo.repository.IncomeTaxSlabRepository;
 import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hack17.hybo.repository.TLHAdvisorRepository;
 import com.hack17.hybo.repository.TransactionRepository;
+import com.hack17.hybo.service.TLHAdvisorService;
 import com.hack17.hybo.util.DateTimeUtil;
 
 @Data
 public class TLHThresholdBasedStrategy implements TLHStrategy {
 
+	private static Logger logger = LoggerFactory.getLogger(TLHThresholdBasedStrategy.class);
 	private final Double thresholdDollarValue;
 	
 	private final Double wagesBasedUpperThreshold = 3000d;
@@ -57,11 +61,14 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 //			return recommendations;
 //		}
 		NetCapitalGainLoss netCapitalGainLoss = calculateNetCapitalGainLoss(portfolio, date);
+		logger.info("Net capital gain loss {}", netCapitalGainLoss);
 		double upperTLHBound = calculateUpperTLHBound(portfolio, date, netCapitalGainLoss);
 		double remainingTLHBenefitOnGains = upperTLHBound;
 		double remainingTLHBenefitOnWage = wagesBasedUpperThreshold;
 		if(netCapitalGainLoss.getNetCapitalLoss()!=null)
 			remainingTLHBenefitOnWage-=netCapitalGainLoss.getNetCapitalLoss();
+		
+		logger.info("upperTLHBound - {}, remainingTLHBenefitOnGains - {}, remainingTLHBenefitOnWage - {}",upperTLHBound,remainingTLHBenefitOnGains,remainingTLHBenefitOnWage);
 		for(Allocation allocation: portfolio.getAllocations()) {
 			if("N".equals(allocation.getIsActive()))
 				continue;
@@ -69,6 +76,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 			double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
 			
 			if(remainingTLHBenefitOnWage<=0 && remainingTLHBenefitOnGains<=0){
+				logger.info("There are no emainingTLHBenefits On Gains and Wage");
 				break;
 			}
 			if(currPrice!=0d && isWashSaleRulePass(allocation, date) ){
@@ -97,6 +105,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 					//int quantity = calculateQuantityToSell(allocation, currPrice);
 					recommendations.add(new Recommendation(allocation, alternateTicker, Action.SELL, quantityToSell));
 				}
+				logger.info("upperTLHBound - {}, remainingTLHBenefitOnGains - {}, remainingTLHBenefitOnWage - {}",upperTLHBound,remainingTLHBenefitOnGains,remainingTLHBenefitOnWage);
 			}
 		}
 		return recommendations;
@@ -252,7 +261,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		Fund correlatedFund = fundRepository.findFund(alternateTicker);
 		Date date30DaysBack = DateTimeUtil.add(date, Calendar.DATE, -30);
 		List<Transaction> transactions = transactionRepo.getTransactions(correlatedFund, allocation.getPortfolio(), date30DaysBack, date);
-		
+		logger.info("wash sale run for allocation {} {}", allocation.getId(), transactions.size()==0?"passes":"fails");
 		return transactions.size()==0;
 //		long diffInMilliSec = date.getTime()-allocation.getTransactionDate().getTime();
 //		TimeUnit.DAYS.convert(diffInMilliSec, TimeUnit.MILLISECONDS);

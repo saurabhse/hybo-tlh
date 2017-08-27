@@ -84,11 +84,13 @@ public class TLHScheduler {
 		 
 		if(DateTimeUtil.isMonth(currDate.getDate(), 10) && DateTimeUtil.isDay(currDate.getDate(), 1)){
 			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
+			logger.info("creating year start tlh stats for portfolio id {} on date {}", portfolio.getId(), currDate.getDate());
 			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
 		}
 		
 		if(DateTimeUtil.isMonth(currDate.getDate(), 9) && DateTimeUtil.isDay(currDate.getDate(), 30)){
 			Portfolio portfolio = portfolioRepo.getAllPortfolios().get(0);
+			logger.info("creating year end tlh stats for portfolio id {} on date {}", portfolio.getId(), currDate.getDate());
 			ReportUtil.createTLHHistory(portfolio, currDate.getDate());
 		}
 		
@@ -99,7 +101,7 @@ public class TLHScheduler {
 		List<Portfolio> portfolios = portfolioRepo.getAllPortfolios();
 		for(Portfolio portfolio: portfolios){
 			if(tlhAdvisorRepo.findTLHAdviceOnDate(portfolio, currDate.getDate()).size()!=0){
-				logger.info(String.format("TLH already ran for portfolio id %d on date %s", portfolio.getId(), currDate.getDate()));
+				logger.info("TLH already ran for portfolio id {} on date {}", portfolio.getId(), currDate.getDate());
 				continue;
 			}
 			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
