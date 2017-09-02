@@ -101,7 +101,7 @@ public class TLHScheduler {
 			return;
 		}
 		
-		if(!DateTimeUtil.isWeekend(currDate.getDate())){
+		if(DateTimeUtil.isWeekend(currDate.getDate())){
 			logger.info("Date is either Sunday or Saturday");
 			return;
 		}
