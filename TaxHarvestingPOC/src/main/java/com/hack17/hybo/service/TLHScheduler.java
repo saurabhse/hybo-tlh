@@ -101,8 +101,10 @@ public class TLHScheduler {
 			return;
 		}
 		
-//		if(!DateTimeUtil.isDay(currDate.getDate(), 15))
-//			return;
+		if(!DateTimeUtil.isWeekend(currDate.getDate())){
+			logger.info("Date is either Sunday or Saturday");
+			return;
+		}
 		
 		
 		List<Portfolio> portfolios = portfolioRepo.getAllPortfolios();

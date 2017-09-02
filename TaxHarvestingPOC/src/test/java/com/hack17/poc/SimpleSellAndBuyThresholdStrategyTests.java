@@ -271,8 +271,8 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		fundRepo.createFund("VEA");
 		fundRepo.createFund("SCHF");
 		refDataRepo.createCorrelatedFund("VEA", "SCHF");
-		Allocation alloc1 = new Allocation(fundRepo.findFund("VTI"),73.23,5000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
-		Allocation alloc2 = new Allocation(fundRepo.findFund("VEA"),33.62,5000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
+		Allocation alloc1 = new Allocation(fundRepo.findFund("VTI"),73.23,1000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
+		Allocation alloc2 = new Allocation(fundRepo.findFund("VEA"),33.62,1000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
 		Portfolio portfolio = portfolioRepo.getPortfolio(portfolioId);
 		portfolio.addAllocation(alloc1);
 		portfolio.addAllocation(alloc2);
@@ -284,9 +284,9 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		refDataRepo.createPrice("VEA", 31.13d, getDateMMMddyyyy("Nov 30, 2012"));
 		Date dateOfExec = DateTimeUtil.getDatedd_MMM_yyyy("30-Nov-2012");
 		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, dateOfExec);
-		assertEquals(1,  tlhAdvice.getRecommendations().size());
-		assertEquals(1304,  tlhAdvice.getRecommendations().get(0).getQuantity());
-		//assertEquals(1000,  tlhAdvice.getRecommendations().get(1).getQuantity());
+		assertEquals(2,  tlhAdvice.getRecommendations().size());
+		assertEquals(1000,  tlhAdvice.getRecommendations().get(0).getQuantity());
+		assertEquals(710,  tlhAdvice.getRecommendations().get(1).getQuantity());
 	}
 	
 	@Test 
@@ -315,6 +315,30 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 	
 	@Test 
 	@Transactional
+	public void recommendationForSellMinThresholdOnShortCapitalGainsDemoScenario() {
+		fundRepo.createFund("VBR");
+		fundRepo.createFund("IWN");
+		refDataRepo.createCorrelatedFund("VBR", "IWN");
+		Allocation alloc1 = new Allocation(fundRepo.findFund("VBR"),73.23,1000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
+		Allocation alloc2 = new Allocation(fundRepo.findFund("IWN"),33.62,1000,50d, getDateMMMddyyyy("Nov 01, 2012"), .04,0, CreatedBy.PORT.toString(), getDateMMMddyyyy("Nov 01, 2012"));
+		Portfolio portfolio = portfolioRepo.getPortfolio(portfolioId);
+		portfolio.addAllocation(alloc1);
+		portfolio.addAllocation(alloc2);
+		Allocation allocForTrans = new Allocation(fundRepo.findFund("VBR"),78.3,70,50d, getDateMMMddyyyy("Jan 01, 2015"), .04,0, CreatedBy.PORT.toString(), portfolio);
+		allocForTrans.setBuyDate(getDateMMMddyyyy("Jan 01, 2015"));
+		dbLoggerService.logTransaction(allocForTrans, 100, getDateMMMddyyyy("Feb 10, 2015"), 70, Action.SELL, CreatedBy.TLH);
+		portfolioRepo.persist(portfolio);
+		refDataRepo.createPrice("VBR", 72.5d, getDateMMMddyyyy("Feb 20, 2015"));
+		refDataRepo.createPrice("IWN", 32.13d, getDateMMMddyyyy("Feb 20, 2015"));
+		Date dateOfExec = DateTimeUtil.getDatedd_MMM_yyyy("20-Feb-2015");
+		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, dateOfExec);
+		assertEquals(1,  tlhAdvice.getRecommendations().size());
+		//assertEquals(1000,  tlhAdvice.getRecommendations().get(0).getQuantity());
+		//assertEquals(1000,  tlhAdvice.getRecommendations().get(1).getQuantity());
+	}
+	
+	@Test 
+	@Transactional
 	public void recommendationForSellMinThresholdOnLongCapitalLoss() {
 		fundRepo.createFund("VEA");
 		fundRepo.createFund("SCHF");
@@ -333,7 +357,7 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		Date dateOfExec = DateTimeUtil.getDatedd_MMM_yyyy("30-Nov-2012");
 		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, dateOfExec);
 		assertEquals(1,  tlhAdvice.getRecommendations().size());
-		assertEquals(1098,  tlhAdvice.getRecommendations().get(0).getQuantity());
+		assertEquals(183,  tlhAdvice.getRecommendations().get(0).getQuantity());
 	}
 	
 	@Test 
@@ -349,7 +373,7 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		portfolio.addAllocation(alloc2);
 		Allocation allocForTrans = new Allocation(fundRepo.findFund("VTI"),70.00,1000,50d, getDateMMMddyyyy("Nov 01, 2009"), .04,0, CreatedBy.PORT.toString(), portfolio);
 		allocForTrans.setBuyDate(getDateMMMddyyyy("Nov 01, 2009"));
-		dbLoggerService.logTransaction(allocForTrans, 65, getDateMMMddyyyy("Oct 15, 2012"), 500, Action.SELL, CreatedBy.TLH);
+		dbLoggerService.logTransaction(allocForTrans, 80, getDateMMMddyyyy("Oct 15, 2012"), 500, Action.SELL, CreatedBy.TLH);
 		allocForTrans = new Allocation(fundRepo.findFund("VTI"),70.00,1000,50d, getDateMMMddyyyy("Nov 01, 2009"), .04,0, CreatedBy.PORT.toString(), portfolio);
 		allocForTrans.setBuyDate(getDateMMMddyyyy("Nov 01, 2009"));
 		dbLoggerService.logTransaction(allocForTrans, 65, getDateMMMddyyyy("Oct 15, 2012"), 500, Action.SELL, CreatedBy.TLH);
@@ -359,7 +383,7 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		Date dateOfExec = DateTimeUtil.getDatedd_MMM_yyyy("30-Nov-2012");
 		TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio, dateOfExec);
 		assertEquals(1,  tlhAdvice.getRecommendations().size());
-		assertEquals(1098,  tlhAdvice.getRecommendations().get(0).getQuantity());
+		assertEquals(2014,  tlhAdvice.getRecommendations().get(0).getQuantity());
 	}
 	
 	@Test 
@@ -432,6 +456,8 @@ public class SimpleSellAndBuyThresholdStrategyTests {
 		assertEquals(Action.BUY, transaction.getAction());
 		
 	}
+	
+	
 	
 	@Test @Ignore
 	public void noStockInlossBeyondThreshold() {

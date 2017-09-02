@@ -62,21 +62,67 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 //		}
 		NetCapitalGainLoss netCapitalGainLoss = calculateNetCapitalGainLoss(portfolio, date);
 		logger.info("Net capital gain loss {}", netCapitalGainLoss);
-		double upperTLHBound = calculateUpperTLHBound(portfolio, date, netCapitalGainLoss);
-		double remainingTLHBenefitOnGains = upperTLHBound;
+		//double upperTLHBound = calculateUpperTLHBound(portfolio, date, netCapitalGainLoss);
+		double remainingTLHBenefitOnGains = netCapitalGainLoss.getLongTermCapitalGain()+netCapitalGainLoss.getShortTermCapitalGain();
 		double remainingTLHBenefitOnWage = wagesBasedUpperThreshold;
-		if(netCapitalGainLoss.getNetCapitalLoss()!=null)
-			remainingTLHBenefitOnWage-=netCapitalGainLoss.getNetCapitalLoss();
-		
-		logger.info("upperTLHBound - {}, remainingTLHBenefitOnGains - {}, remainingTLHBenefitOnWage - {}",upperTLHBound,remainingTLHBenefitOnGains,remainingTLHBenefitOnWage);
+		double remainingUpperBoundForTLH = remainingTLHBenefitOnGains+remainingTLHBenefitOnWage;
+		logger.info("remainingTLHBenefitOnGains - {}, remainingTLHBenefitOnWage - {}, remainingTotalUpperBoundForTLH - {}",remainingTLHBenefitOnGains,remainingTLHBenefitOnWage, remainingUpperBoundForTLH);
+		//if(netCapitalGainLoss.getNetCapitalLoss()!=null)
+//			remainingTLHBenefitOnWage-=netCapitalGainLoss.getNetCapitalLoss();
+		//loop for all possible recommendations
 		for(Allocation allocation: portfolio.getAllocations()) {
+			if(remainingUpperBoundForTLH <= 0){
+				break;
+			}
+			if("N".equals(allocation.getIsActive()))
+				continue;
+			String ticker = allocation.getFund().getTicker();
+			double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
+			
+			
+			String alternateTicker = refDataRepo.getCorrelatedTicker(allocation.getFund().getTicker());
+			if(alternateTicker == null){
+				logger.info("No correlated fund found for ticker {}", allocation.getFund().getTicker());
+				continue;
+			}
+			logger.info("correlated fund is {}", alternateTicker);
+			Fund correlatedFund = fundRepository.findFund(alternateTicker);
+			if(correlatedFund == null){
+				logger.info("correlated fund data found for {}", alternateTicker);
+				continue;
+			}
+			if(currPrice!=0d && isWashSaleRulePass(allocation, date, allocation.getFund(), correlatedFund) ){
+				//&& isTLHConditionPass(portfolio, allocation, currPrice, upperTLHBound, date)
+				int quantityToSell = 0;
+				
+				double availableLossFortlhBenefit = calculateLossForTLHBenefit(allocation, currPrice, remainingUpperBoundForTLH);
+				logger.info("available loss for tlh benefits {}", availableLossFortlhBenefit);
+				if(availableLossFortlhBenefit>0){
+					remainingUpperBoundForTLH-=availableLossFortlhBenefit;
+					quantityToSell = calculateQuantityToSellOnWages(allocation, currPrice, availableLossFortlhBenefit);
+				}
+				if(quantityToSell==0){
+					logger.info("no quantity available for selling for allocation {}", allocation.getId());
+					continue;
+				}
+				if(quantityToSell>allocation.getQuantity())
+					quantityToSell= allocation.getQuantity();
+				
+				if(alternateTicker!=null && quantityToSell>0){
+					//int quantity = calculateQuantityToSell(allocation, currPrice);
+					recommendations.add(new Recommendation(allocation, alternateTicker, Action.SELL, quantityToSell));
+				}
+			}
+		}
+		
+		/*for(Allocation allocation: portfolio.getAllocations()) {
 			if("N".equals(allocation.getIsActive()))
 				continue;
 			String ticker = allocation.getFund().getTicker();
 			double currPrice = refDataRepo.getPriceOnDate(allocation.getFund().getTicker(), date);
 			
 			if(remainingTLHBenefitOnWage<=0 && remainingTLHBenefitOnGains<=0){
-				logger.info("There are no emainingTLHBenefits On Gains and Wage");
+				logger.info("There are no remainingTLHBenefits On Gains and Wage");
 				break;
 			}
 			String alternateTicker = refDataRepo.getCorrelatedTicker(allocation.getFund().getTicker());
@@ -90,7 +136,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				logger.info("correlated fund data found for {}", alternateTicker);
 				continue;
 			}
-			if(currPrice!=0d && isWashSaleRulePass(allocation, date, correlatedFund) ){
+			if(currPrice!=0d && isWashSaleRulePass(allocation, date, allocation.getFund(), correlatedFund) ){
 				//&& isTLHConditionPass(portfolio, allocation, currPrice, upperTLHBound, date)
 				int quantityToSell = 0;
 				if(remainingTLHBenefitOnGains>0){
@@ -122,7 +168,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 				}
 				logger.info("upperTLHBound - {}, remainingTLHBenefitOnGains - {}, remainingTLHBenefitOnWage - {}",upperTLHBound,remainingTLHBenefitOnGains,remainingTLHBenefitOnWage);
 			}
-		}
+		}*/
 		return recommendations;
 	}
 
@@ -133,7 +179,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		Date yearStartDate = getFinancialYearDate(DateTimeUtil.FROM, date);
 		Date yearEndDate = getFinancialYearDate(DateTimeUtil.TO, date);
 		List<Transaction> transactions = transactionRepo.getTransactions(portfolio, yearStartDate, yearEndDate);
-		List<CapitalGainLoss> capitalGainLosses = calculateCapitalGainLoss(transactions);
+		List<CapitalGainLoss> capitalGainLosses = calculateCapitalGainLossOnSellTransactions(transactions);
 		double longTermCapitalGains = 0;
 		double shortTermCapitalGains = 0;
 		
@@ -144,7 +190,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 			}
 			longTermCapitalGains+=gainLoss.getCapitalGainLoss();
 		}
-		if(longTermCapitalGains>0 && shortTermCapitalGains>0){
+		/*if(longTermCapitalGains>0 && shortTermCapitalGains>0){
 			netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
 			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
 		}else if(longTermCapitalGains>0 && shortTermCapitalGains<=0){
@@ -158,7 +204,9 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 			netCapitalGainLoss.setNetCapitalLoss(shortTermCapitalGains);
 		}else if(shortTermCapitalGains!=0){
 			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
-		}
+		}*/
+		netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
+		netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
 		return netCapitalGainLoss;
 	}
 
@@ -231,7 +279,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private List<CapitalGainLoss> calculateCapitalGainLoss(List<Transaction> transactions) {
+	private List<CapitalGainLoss> calculateCapitalGainLossOnSellTransactions(List<Transaction> transactions) {
 		List<CapitalGainLoss> captialGainLosses = new ArrayList<>();
 		transactions.stream().filter(transaction->Action.SELL.equals(transaction.getAction())).forEach(transaction->{
 			Date buyDate = transaction.getBuyDate();
@@ -270,12 +318,14 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private boolean isWashSaleRulePass(Allocation allocation, Date date, Fund correlatedFund) {
+	private boolean isWashSaleRulePass(Allocation allocation, Date date, Fund fund, Fund correlatedFund) {
 		
 		Date date30DaysBack = DateTimeUtil.add(date, Calendar.DATE, -30);
-		List<Transaction> transactions = transactionRepo.getTransactions(correlatedFund, allocation.getPortfolio(), date30DaysBack, date);
-		logger.info("wash sale run for allocation {} {}", allocation.getId(), transactions.size()==0?"passes":"fails");
-		return transactions.size()==0;
+		List<Transaction> fundTransactions = transactionRepo.getTransactions(fund, allocation.getPortfolio(), date30DaysBack, date, Action.BUY);
+		List<Transaction> correlatedFundTransactions = transactionRepo.getTransactions(correlatedFund, allocation.getPortfolio(), date30DaysBack, date, Action.SELL);
+		boolean washSalesRulePasses = fundTransactions.size()==0 && correlatedFundTransactions.size()==0;
+		logger.info("wash sale run for allocation {} passes? {}", allocation.getId(), washSalesRulePasses);
+		return washSalesRulePasses;
 //		long diffInMilliSec = date.getTime()-allocation.getTransactionDate().getTime();
 //		TimeUnit.DAYS.convert(diffInMilliSec, TimeUnit.MILLISECONDS);
 //		long timeInDaysSinceBuy = TimeUnit.DAYS.convert(diffInMilliSec, TimeUnit.MILLISECONDS);
@@ -335,6 +385,17 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		
 		if(currLoss>remainingTLHBenefitOnWages)
 			return remainingTLHBenefitOnWages;
+		return currLoss;
+	}
+	
+	private double calculateLossForTLHBenefit(Allocation allocation, double currPrice, double remainingTotalUpperBound) {
+		double currLoss = calculateLoss(allocation, currPrice);
+		
+		if(currLoss<thresholdDollarValue)
+			return 0;
+		
+		if(currLoss>remainingTotalUpperBound)
+			return remainingTotalUpperBound;
 		return currLoss;
 	}
 	
