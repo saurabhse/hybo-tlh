@@ -19,7 +19,7 @@ import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hack17.hybo.repository.TLHAdvisorRepository;
 import com.hack17.hybo.util.DateTimeUtil;
-import com.hack17.hybo.util.ReportUtil;
+import com.hack17.poc.util.ReportUtil;
 
 
 @Component
@@ -86,10 +86,9 @@ public class TLHScheduler {
 		if(DateTimeUtil.isMonth(currDate.getDate(), 10) && DateTimeUtil.isDay(currDate.getDate(), 1)){
 			Date nextWeekDay = DateTimeUtil.getNextWorkingDay(currDate.getDate());
 			for(Portfolio portfolio : portfolioRepo.getAllPortfolios()){
-				logger.info("creating year start tlh stats for portfolio id {} on date {}", portfolio.getId(), nextWeekDay);
 				ReportUtil.createTLHHistory(portfolio, currDate.getDate(), nextWeekDay);
 			}
-			return;
+			//return;
 		}
 		
 		if(DateTimeUtil.isMonth(currDate.getDate(), 9) && DateTimeUtil.isDay(currDate.getDate(), 30)){
@@ -98,11 +97,11 @@ public class TLHScheduler {
 				logger.info("creating year end tlh stats for portfolio id {} on date {}", portfolio.getId(), previousWeekDay);
 				ReportUtil.createTLHHistory(portfolio, currDate.getDate(), previousWeekDay);
 			}
-			return;
+			//return;
 		}
 		
-		if(DateTimeUtil.isWeekend(currDate.getDate())){
-			logger.info("Date is either Sunday or Saturday");
+		if(!isDayCheckPass(currDate)){
+			logger.info("tlh not configured to run on this day {}", currDate.getDate());
 			return;
 		}
 		
@@ -116,10 +115,40 @@ public class TLHScheduler {
 			TLHAdvice tlhAdvice = tlhAdvisorService.advise(portfolio,currDate.getDate());
 			tlhAdvisorService.execute(tlhAdvice);
 			tlhAdvisorRepo.saveTLHAdvice(tlhAdvice);
-			TLHRunPortfolioHistory tlhHistory = new TLHRunPortfolioHistory();
-			logger.info(ReportUtil.report(portfolio, currDate.getDate(),tlhHistory));
-			portfolioRepo.persist(tlhHistory);
+			if(tlhAdvice.getRecommendations().size()>0){
+				TLHRunPortfolioHistory tlhHistory = new TLHRunPortfolioHistory();
+				logger.info(ReportUtil.report(portfolio, currDate.getDate(),tlhHistory));
+				portfolioRepo.persist(tlhHistory);
+			}
 		}
 		
+	}
+
+	private boolean isDayCheckPass(CurrentDate currDate) {
+		Date today = currDate.getDate();
+		if(DateTimeUtil.isWeekend(today))
+				return false;
+		if(isQ1End(today))
+			return true;
+		if(isQ2End(today))
+			return true;
+		if(isQ3End(today))
+			return true;
+		if(isQ4End(today))
+			return true;
+		return false;
+	}
+
+	private boolean isQ1End(Date today) {
+		return DateTimeUtil.isMonth(today, 3) && DateTimeUtil.isDay(today, 31);
+	}
+	private boolean isQ2End(Date today) {
+		return DateTimeUtil.isMonth(today, 6) && DateTimeUtil.isDay(today, 30);
+	}
+	private boolean isQ3End(Date today) {
+		return DateTimeUtil.isMonth(today, 9) && DateTimeUtil.isDay(today, 30);
+	}
+	private boolean isQ4End(Date today) {
+		return DateTimeUtil.isMonth(today, 12) && DateTimeUtil.isDay(today, 31);
 	}
 }

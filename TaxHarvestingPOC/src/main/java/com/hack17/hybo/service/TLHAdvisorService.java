@@ -1,5 +1,7 @@
 package com.hack17.hybo.service;
 
+import static com.hack17.hybo.util.DateTimeUtil.getFinancialYearDate;
+
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -19,17 +21,22 @@ import org.springframework.test.context.transaction.TransactionConfiguration;
 
 import com.hack17.hybo.domain.Action;
 import com.hack17.hybo.domain.Allocation;
+import com.hack17.hybo.domain.CapitalGainLoss;
 import com.hack17.hybo.domain.CreatedBy;
 import com.hack17.hybo.domain.Fund;
 import com.hack17.hybo.domain.Portfolio;
 import com.hack17.hybo.domain.Recommendation;
 import com.hack17.hybo.domain.TLHAdvice;
+import com.hack17.hybo.domain.Transaction;
+import com.hack17.hybo.domain.CapitalGainLoss.CapitalGainLossType;
 import com.hack17.hybo.repository.FundRepository;
 import com.hack17.hybo.repository.IncomeTaxSlabRepository;
 import com.hack17.hybo.repository.PortfolioRepository;
 import com.hack17.hybo.repository.ReferenceDataRepository;
 import com.hack17.hybo.repository.TLHAdvisorRepository;
 import com.hack17.hybo.repository.TransactionRepository;
+import com.hack17.hybo.util.DateTimeUtil;
+import com.hack17.poc.service.strategy.NetCapitalGainLoss;
 import com.hack17.poc.service.strategy.TLHStrategy;
 import com.hack17.poc.service.strategy.TLHThresholdBasedStrategy;
 import com.hackovation.hybo.AllocationType;
@@ -81,7 +88,7 @@ public class TLHAdvisorService {
 	@PostConstruct
 	private void init(){
 		tlhStrategyMap = new HashMap<>();
-		tlhStrategyMap.put("threshold", new TLHThresholdBasedStrategy(100d, refDataRepo, tlhAdvisorRepo, transactionRepository, fundRepo, incomeTaxSlabRepo));
+		tlhStrategyMap.put("threshold", new TLHThresholdBasedStrategy(100d, refDataRepo, tlhAdvisorRepo, transactionRepository, fundRepo, incomeTaxSlabRepo, this));
 		
 		
 	}
@@ -168,5 +175,66 @@ public class TLHAdvisorService {
 
 	private void logTransaction(Allocation allocation, double sellPrice, Date sellDate, double quantity, Action action){
 		dbLoggerService.logTransaction(allocation, sellPrice, sellDate, quantity, action, CreatedBy.TLH);
+	}
+	
+	public NetCapitalGainLoss calculateNetCapitalGainLoss(Portfolio portfolio,
+			Date date) {
+		NetCapitalGainLoss netCapitalGainLoss = new NetCapitalGainLoss();
+		Date yearStartDate = getFinancialYearDate(DateTimeUtil.FROM, date);
+		Date yearEndDate = getFinancialYearDate(DateTimeUtil.TO, date);
+		List<Transaction> transactions = transactionRepository.getTransactions(portfolio, yearStartDate, yearEndDate);
+		List<CapitalGainLoss> capitalGainLosses = calculateCapitalGainLossOnSellTransactions(transactions);
+		double longTermCapitalGains = 0;
+		double shortTermCapitalGains = 0;
+		
+		for(CapitalGainLoss gainLoss:capitalGainLosses){
+			if(CapitalGainLoss.CapitalGainLossType.STCG.equals(gainLoss.getGainLossType()) || CapitalGainLoss.CapitalGainLossType.STCL.equals(gainLoss.getGainLossType())){
+				shortTermCapitalGains+=gainLoss.getCapitalGainLoss();
+				continue;
+			}
+			longTermCapitalGains+=gainLoss.getCapitalGainLoss();
+		}
+		/*if(longTermCapitalGains>0 && shortTermCapitalGains>0){
+			netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
+			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
+		}else if(longTermCapitalGains>0 && shortTermCapitalGains<=0){
+			longTermCapitalGains+=shortTermCapitalGains;
+			if(longTermCapitalGains>=0)
+				netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
+			else{
+				netCapitalGainLoss.setNetCapitalLoss(longTermCapitalGains);
+			}
+		}else if(longTermCapitalGains<0 && shortTermCapitalGains<0){
+			netCapitalGainLoss.setNetCapitalLoss(shortTermCapitalGains);
+		}else if(shortTermCapitalGains!=0){
+			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
+		}*/
+		netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
+		netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
+		return netCapitalGainLoss;
+	}
+	
+	private List<CapitalGainLoss> calculateCapitalGainLossOnSellTransactions(List<Transaction> transactions) {
+		List<CapitalGainLoss> captialGainLosses = new ArrayList<>();
+		transactions.stream().filter(transaction->Action.SELL.equals(transaction.getAction())).forEach(transaction->{
+			Date buyDate = transaction.getBuyDate();
+			Date sellDate = transaction.getSellDate();
+			Double buyPrice = transaction.getBuyPrice();
+			Double sellPrice = transaction.getSellPrice();
+			Double quantity = transaction.getQuantity();
+			boolean isMoreThanYearOld = DateTimeUtil.isMoreThanYearOld(buyDate, sellDate);
+			Double profit = (sellPrice*quantity) - (buyPrice*quantity);
+			captialGainLosses.add(new CapitalGainLoss(profit, calculateCapitalGainLossType(isMoreThanYearOld, profit)));
+		});
+		return captialGainLosses;
+	}
+
+
+	private CapitalGainLossType calculateCapitalGainLossType(
+			boolean isMoreThanYearOld, Double profit) {
+		if(isMoreThanYearOld)
+			return profit >=0? CapitalGainLossType.LTCG: CapitalGainLossType.LTCL;
+		else
+			return profit >=0? CapitalGainLossType.STCG: CapitalGainLossType.STCL;
 	}
 }

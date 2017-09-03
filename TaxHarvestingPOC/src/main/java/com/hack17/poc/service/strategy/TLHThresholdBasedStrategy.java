@@ -53,6 +53,8 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	
 	final private IncomeTaxSlabRepository incomeTaxSlabRepo;
 	
+	final private TLHAdvisorService tlhAdvisorService;
+	
 	@Override
 	public List<Recommendation> execute(Portfolio portfolio, Date date) {
 		List<Recommendation> recommendations = new ArrayList<>();
@@ -60,7 +62,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 //		if(alreadyAdvisedOn(portfolio, date)){
 //			return recommendations;
 //		}
-		NetCapitalGainLoss netCapitalGainLoss = calculateNetCapitalGainLoss(portfolio, date);
+		NetCapitalGainLoss netCapitalGainLoss = tlhAdvisorService.calculateNetCapitalGainLoss(portfolio, date);
 		logger.info("Net capital gain loss {}", netCapitalGainLoss);
 		//double upperTLHBound = calculateUpperTLHBound(portfolio, date, netCapitalGainLoss);
 		double remainingTLHBenefitOnGains = netCapitalGainLoss.getLongTermCapitalGain()+netCapitalGainLoss.getShortTermCapitalGain();
@@ -173,43 +175,6 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 
 
-	private NetCapitalGainLoss calculateNetCapitalGainLoss(Portfolio portfolio,
-			Date date) {
-		NetCapitalGainLoss netCapitalGainLoss = new NetCapitalGainLoss();
-		Date yearStartDate = getFinancialYearDate(DateTimeUtil.FROM, date);
-		Date yearEndDate = getFinancialYearDate(DateTimeUtil.TO, date);
-		List<Transaction> transactions = transactionRepo.getTransactions(portfolio, yearStartDate, yearEndDate);
-		List<CapitalGainLoss> capitalGainLosses = calculateCapitalGainLossOnSellTransactions(transactions);
-		double longTermCapitalGains = 0;
-		double shortTermCapitalGains = 0;
-		
-		for(CapitalGainLoss gainLoss:capitalGainLosses){
-			if(CapitalGainLoss.CapitalGainLossType.STCG.equals(gainLoss.getGainLossType()) || CapitalGainLoss.CapitalGainLossType.STCL.equals(gainLoss.getGainLossType())){
-				shortTermCapitalGains+=gainLoss.getCapitalGainLoss();
-				continue;
-			}
-			longTermCapitalGains+=gainLoss.getCapitalGainLoss();
-		}
-		/*if(longTermCapitalGains>0 && shortTermCapitalGains>0){
-			netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
-			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
-		}else if(longTermCapitalGains>0 && shortTermCapitalGains<=0){
-			longTermCapitalGains+=shortTermCapitalGains;
-			if(longTermCapitalGains>=0)
-				netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
-			else{
-				netCapitalGainLoss.setNetCapitalLoss(longTermCapitalGains);
-			}
-		}else if(longTermCapitalGains<0 && shortTermCapitalGains<0){
-			netCapitalGainLoss.setNetCapitalLoss(shortTermCapitalGains);
-		}else if(shortTermCapitalGains!=0){
-			netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
-		}*/
-		netCapitalGainLoss.setLongTermCapitalGain(longTermCapitalGains);
-		netCapitalGainLoss.setShortTermCapitalGain(shortTermCapitalGains);
-		return netCapitalGainLoss;
-	}
-
 
 	private double calculateUpperTLHBound(Portfolio portfolio, Date date, NetCapitalGainLoss netCapitalGainLoss) {
 		
@@ -277,32 +242,6 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 		}
 		return tax;
 	}
-
-
-	private List<CapitalGainLoss> calculateCapitalGainLossOnSellTransactions(List<Transaction> transactions) {
-		List<CapitalGainLoss> captialGainLosses = new ArrayList<>();
-		transactions.stream().filter(transaction->Action.SELL.equals(transaction.getAction())).forEach(transaction->{
-			Date buyDate = transaction.getBuyDate();
-			Date sellDate = transaction.getSellDate();
-			Double buyPrice = transaction.getBuyPrice();
-			Double sellPrice = transaction.getSellPrice();
-			Double quantity = transaction.getQuantity();
-			boolean isMoreThanYearOld = DateTimeUtil.isMoreThanYearOld(buyDate, sellDate);
-			Double profit = (sellPrice*quantity) - (buyPrice*quantity);
-			captialGainLosses.add(new CapitalGainLoss(profit, calculateCapitalGainLossType(isMoreThanYearOld, profit)));
-		});
-		return captialGainLosses;
-	}
-
-
-	private CapitalGainLossType calculateCapitalGainLossType(
-			boolean isMoreThanYearOld, Double profit) {
-		if(isMoreThanYearOld)
-			return profit >=0? CapitalGainLossType.LTCG: CapitalGainLossType.LTCL;
-		else
-			return profit >=0? CapitalGainLossType.STCG: CapitalGainLossType.STCL;
-	}
-
 
 	private int calculateQuantityToSell(Allocation allocation, double currPrice) {
 		double currLoss = calculateLoss(allocation, currPrice); 

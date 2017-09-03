@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @ComponentScan("com.hack17.hybo")
+@ComponentScan("com.hack17.poc.util")
 @EnableScheduling
 public class TaxHarvestingPocApplication {
 

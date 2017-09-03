@@ -1,0 +1,17 @@
+Dec 31, 13 tue
+
+mar 31, 14 mon
+jun 30, 14 mon
+sep 30, 14 tue
+Dec 31, 14 wed
+
+mar 31, 15 tue
+jun 30, 15 tue
+sep 30, 15 wed
+dec 31, 15 thu
+
+mar 31, 16 thu
+jun 30, 16 thu
+sep 30, 16 fri
+dec 31, 16 sat
+
