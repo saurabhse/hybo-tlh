@@ -1,7 +1,8 @@
-delete from hybo.tlhrunportfoliohistory_tlhrunallocationhistory;
-delete from hybo.tlhrunallocationhistory;
-delete from hybo.tlhrunportfoliohistory;
-delete from hybo.tlhadvice_recommendation;
-delete from hybo.recommendation;
-delete from hybo.tlhadvice;
-delete from hybo.portfoliotaxalphahistory;
+truncate hybo.tlhrunportfoliohistory_tlhrunallocationhistory;
+truncate hybo.tlhrunallocationhistory;
+truncate hybo.tlhrunportfoliohistory;
+truncate hybo.tlhadvice_recommendation;
+truncate hybo.recommendation;
+truncate hybo.tlhadvice;
+truncate hybo.portfoliotaxalphahistory;
+commit;
