@@ -106,6 +106,11 @@ public class TLHAdvisorService {
 			if(!portfolioCloned){
 				portfolioCloned=true;
 				newAllocations = clonePortfolio(portfolio, activeAllocMap);
+				for(Allocation newAlloc:newAllocations){
+					newAlloc.setCreatedBy(CreatedBy.TLH.toString());
+					newAlloc.setTransactionDate(adviceDate);
+					
+				}
 			}
 			Optional<Allocation> optionAllocation =portfolio.getAllocations().stream().filter(alloc->alloc.equals(recommendation.getAllocation()) && "Y".equals(alloc.getIsActive())).findFirst();
 			if(optionAllocation.isPresent() && optionAllocation.get().getQuantity() >= recommendation.getQuantity()){
