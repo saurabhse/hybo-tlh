@@ -107,7 +107,7 @@ public class TLHAdvisorService {
 				portfolioCloned=true;
 				newAllocations = clonePortfolio(portfolio, activeAllocMap);
 				for(Allocation newAlloc:newAllocations){
-					newAlloc.setCreatedBy(CreatedBy.TLH.toString());
+//					newAlloc.setCreatedBy(CreatedBy.TLH.toString());
 					newAlloc.setTransactionDate(adviceDate);
 					
 				}

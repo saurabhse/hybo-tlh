@@ -352,7 +352,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 	}
 	
 	private int calculateQuantityToSellOnWages(Allocation allocation, double currPrice, double tlhBenefitOnWages) {
-		double diffInPrices = allocation.getRebalanceDayPrice()-currPrice;
+		double diffInPrices = allocation.getCostPrice()-currPrice;
 		int quantityToSell = new Double(tlhBenefitOnWages/diffInPrices).intValue();
 		
 		return quantityToSell;
@@ -360,7 +360,7 @@ public class TLHThresholdBasedStrategy implements TLHStrategy {
 
 
 	private double calculateLoss(Allocation allocation, double currPrice) {
-		double currLoss = (currPrice-allocation.getRebalanceDayPrice())*allocation.getQuantity();
+		double currLoss = (currPrice-allocation.getCostPrice())*allocation.getQuantity();
 		return -currLoss;
 	}
 	
